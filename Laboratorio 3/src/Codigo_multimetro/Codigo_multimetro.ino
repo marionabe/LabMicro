@@ -42,6 +42,9 @@ pinMode(10, INPUT);
 pinMode(11, INPUT);
 pinMode(2, INPUT);
 
+pinMode(12, OUTPUT); // LED de advertencia
+digitalWrite(12, LOW); // Inicialmente apagado
+
 display.begin();
 display.setContrast(75);
 
@@ -53,6 +56,8 @@ valorMultimetro1=analogRead(A0);
 valorMultimetro2=analogRead(A1);
 valorMultimetro3=analogRead(A2);
 valorMultimetro4=analogRead(A3);
+
+bool excesoTension = false;
 
 dc_1_en=digitalRead(8);
 dc_2_en=digitalRead(9);
@@ -103,12 +108,14 @@ if (dc_1_en==1){
 
 //Imprimir mensaje de peligro por exceso de tensión
   if ((valorMultimetro1>20 || valorMultimetro1 < -20) && dc_1_en){
+    excesoTension = true;
     delay(20);
     display.clearDisplay();
     texto = "!Exc. tension!";
     display.println(texto);
     delay(4);
   } else if((valorMultimetro1>14.14) && dc_1_en==0){
+    excesoTension = true;
     delay(20);
     display.clearDisplay();
     texto = "!Exc. tension!";
@@ -160,12 +167,14 @@ if (dc_2_en==1){
 
 //Imprimir mensaje de peligro por exceso de tensión
   if ((valorMultimetro2>20 || valorMultimetro2 < -20) && dc_2_en){
+    excesoTension = true;
     delay(20);
     display.clearDisplay();
     texto = "!Exc. tension!";
     display.println(texto);
     delay(4);
   } else if((valorMultimetro2>14.14) && dc_2_en==0){
+    excesoTension = true;
     delay(20);
     display.clearDisplay();
     texto = "!Exc. tension!";
@@ -216,12 +225,14 @@ if (dc_3_en==1){
 
 //Imprimir mensaje de peligro por exceso de tensión
   if ((valorMultimetro3>20 || valorMultimetro3 < -20) && dc_3_en){
+    excesoTension = true;
     delay(20);
     display.clearDisplay();
     texto = "!Exc. tension!";
     display.println(texto);
     delay(4);
   } else if((valorMultimetro3>14.14) && dc_3_en==0){
+    excesoTension = true;
     delay(20);
     display.clearDisplay();
     texto = "!Exc. tension!";
@@ -272,12 +283,14 @@ if (dc_4_en==1){
 
 //Imprimir mensaje de peligro por exceso de tensión
   if ((valorMultimetro4>20 || valorMultimetro4 < -20) && dc_4_en){
+    excesoTension = true;
     delay(20);
     display.clearDisplay();
     texto = "!Exc. tension!";
     display.println(texto);
     delay(4);
   } else if((valorMultimetro4>14.14) && dc_4_en==0){
+    excesoTension = true;
     delay(20);
     display.clearDisplay();
     texto = "!Exc. tension!";
@@ -289,6 +302,12 @@ if (dc_4_en==1){
 //__________Fin de codigo para v4
 //
 
+if (excesoTension) {
+  digitalWrite(12, HIGH);
+} else {
+  digitalWrite(12, LOW);
+}
+
   display.display();
   
 
@@ -298,14 +317,5 @@ if (uart_en==1){
   texto_uart=String(valorMultimetro1)+" "+String(valorMultimetro2)+" "+String(valorMultimetro3)+" "+String(valorMultimetro4);
   Serial.println(texto_uart);
 }
-
-
-
-
-
-
-
- 
-
 
 }
