@@ -48,13 +48,11 @@ void spi_setup(void);
 void spi_setup(void)
 {
     rcc_periph_clock_enable(RCC_SPI5);
-	
     rcc_periph_clock_enable(RCC_GPIOC);
 	rcc_periph_clock_enable(RCC_GPIOF);
 
 	gpio_mode_setup(GPIOC, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, GPIO1);
     gpio_set(GPIOC, GPIO1);
-
     gpio_mode_setup(GPIOF, GPIO_MODE_AF, GPIO_PUPD_NONE,
 		GPIO7 | GPIO8 | GPIO9);   
 	gpio_set_af(GPIOF, GPIO_AF5, GPIO7 | GPIO8 | GPIO9);
@@ -71,11 +69,7 @@ void spi_setup(void)
     SPI_I2SCFGR(SPI5) &= ~SPI_I2SCFGR_I2SMOD;
 	spi_enable(SPI5);
 
-
-	/* Enable GPIOG clock. */
 	rcc_periph_clock_enable(RCC_GPIOG);
-
-	/* Set GPIO13 (in GPIO port G) to 'output push-pull'. */
 	gpio_mode_setup(GPIOG, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, GPIO13 | GPIO14);
 
 }
