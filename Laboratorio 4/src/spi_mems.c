@@ -38,7 +38,6 @@
 #define d2r(d) ((d) * 6.2831853 / 360.0)
 uint8_t com_en;
 uint16_t battery;
-//float battery;
 uint8_t batt_alarm;
 
 uint16_t read_reg(int reg);
@@ -182,32 +181,16 @@ static void adc_setup(void)
   	rcc_periph_clock_enable(RCC_GPIOA);
 	gpio_mode_setup(GPIOA, GPIO_MODE_ANALOG, GPIO_PUPD_NONE, GPIO2);
 
-    // Configurar el ADC_01
-    gpio_mode_setup(GPIOA, GPIO_MODE_ANALOG, GPIO_PUPD_NONE, GPIO2);
-
-    adc_power_off(ADC1);
-    adc_disable_scan_mode(ADC1);
-
-    adc_set_sample_time_on_all_channels(ADC1, ADC_SMPR_SMP_3CYC);
-
-    adc_power_on(ADC1);
-	/*
-	rcc_periph_clock_enable(RCC_ADC1);
-  	rcc_periph_clock_enable(RCC_GPIOA);
-	gpio_mode_setup(GPIOA, GPIO_MODE_ANALOG, GPIO_PUPD_NONE, GPIO1);
-
 	adc_power_off(ADC1);
   	adc_disable_scan_mode(ADC1);
   	adc_set_sample_time_on_all_channels(ADC1, ADC_SMPR_SMP_3CYC);
 
 	adc_power_on(ADC1);
-	*/
 }
 
 static uint16_t read_adc_naiive(uint8_t channel)
 {
-	//uint8_t channel_array[16];
-	uint8_t channel_array[1];
+	uint8_t channel_array[16];
 	channel_array[0] = channel;
 	adc_set_regular_sequence(ADC1, 1, channel_array);
 	adc_start_conversion_regular(ADC1);
@@ -217,9 +200,7 @@ static uint16_t read_adc_naiive(uint8_t channel)
 }
 
 void adc_update(void){
-	//battery = read_adc_naiive(1)*9/4095;
 	battery = read_adc_naiive(2)*9/4095;
-	//battery = (float)((read_adc_naiive(3)*9)/4095.0)*10;
 }
 
 char *axes[] = { "Eje X: ", "Eje Y: ", "Eje Z: " };
