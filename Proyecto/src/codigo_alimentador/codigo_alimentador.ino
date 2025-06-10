@@ -6,6 +6,10 @@ Sección del codigo para descargar datos desde una pagina web
 #include <ESP8266WiFi.h> 
 #include <ArduinoJson.h>
 #include <ESP8266HTTPClient.h>
+#include <FS.h>
+#include <LittleFS.h>
+
+
 char ssid[] = "Casa bambu";
 char pass[] = "camilo123";
 const char* host = "worldtimeapi.org/"; 
@@ -13,6 +17,7 @@ String hora;
 String payload;
 String info_porciones;
 String porc;
+String info_en_mem;
 
 void setup() {
      Serial.begin(115200);   
@@ -34,18 +39,79 @@ void setup() {
       Serial.println("IP address: ");   
       Serial.println(WiFi.localIP());       
 
-
+    if (!LittleFS.begin()) {
+      Serial.println("Error al montar LittleFS");
+    } else {
+      Serial.println("LittleFS montado correctamente");
+    }
       
 } 
 
 
 void loop() {   
-  hora = get_time();
+  //hora = get_time();
   //Serial.println("Respuesta JSON de hora:");
   //Serial.println(hora);
   //Serial.println("Fin de respuesta JSON de hora");
 
+  //Descargar la informacion de las porciones del servidor
+
+
+
+
+
+  
+
+  Serial.println("Inicio de programa");
+
   info_porciones = get_data();
+  info_porciones.trim();
+  if (info_porciones == "error"){
+    //En este caso no fue posible descargar la info del servidor
+    //Se procede a utilizar la informacion que se tenia almacenada en memoria
+    info_porciones = leer_porc_mem();
+
+  }else{
+    //En este caso sí fue posible descargar la info del servidor
+    //Comparar la info descargada con la informacion almacenada en memoria.
+    info_en_mem = leer_porc_mem();
+    info_en_mem.trim();
+            Serial.println("informacion desde la memoria");
+            Serial.println(info_en_mem);
+            Serial.println("informacion desde interner");
+            Serial.println(info_porciones);
+
+            Serial.println("Realizar comparacion entre estos strings");
+            Serial.println(String(info_porciones.equals(info_en_mem)));
+    if (info_porciones.equals(info_en_mem)){
+      //Info almacenada sí es igual que la info en memoria
+                  Serial.println("Se entra al if donde las porciones son iguales");
+    }else{
+      //Info en memoria no es igual que la info en memoria
+      //Procedo a quedarme con la info mas reciente
+
+            Serial.println("Info obtenida de internet");
+            Serial.println(info_porciones);
+            Serial.println("Info en memoria");
+            Serial.println(info_en_mem);
+      int comp = comparar_infos(info_porciones, info_en_mem);
+            Serial.println("Resultado de la comparacion de las informaciones");
+            Serial.println(String(comp));
+      //Si la info en memoria es mas reciente, se reemplaza la variable info_porciones con la info almacenada
+      //Caso contrario se conserva la info del servidor
+      if (comp == 2){
+        info_porciones = info_en_mem;
+        //TODO: aca se debe llamar a la funcion encargada de subir al info al servidor
+      }else{
+      //si la info del servidor es mas reciente, entonces se escribe esa info en la memoria del dispositivo
+      write_data(info_porciones);
+                          Serial.println("Se guardó la nueva info en la memoria");
+      }
+    }
+
+  }
+
+/*
 
   JsonDocument doc_info_porciones;
   deserializeJson(doc_info_porciones, info_porciones);
@@ -74,6 +140,7 @@ void loop() {
       Serial.println(porc);
       counter++;
     }
+    */
 
 
 
@@ -153,13 +220,90 @@ String get_time (){
 String get_data (){
   //Al momento de realizar esta sección del codigo, no se cuenta con el servidor implementado,
   //Por ello se van a simular los datos obtenidos.
-  payload = "{\"porcion1\":{\"cantidad\":3,\"hora_para_servir\":\"08:15\",\"fecha_de_modificacion\":\"2025:05:23:22:31:23\",\"servido_hoy\":\"no\"},\"porcion2\":{\"cantidad\":3,\"hora_para_servir\":\"17:15\",\"fecha_de_modificacion\":\"2025:05:23:22:31:23\",\"servido_hoy\":\"no\"}}";
+  payload = "{\"porcion1\":{\"cantidad\":3,\"hora_para_servir\":\"08:15\",\"fecha_de_modificacion\":\"2024:05:23:22:31:23\",\"servido_hoy\":\"no\"},\"porcion2\":{\"cantidad\":3,\"hora_para_servir\":\"17:15\",\"fecha_de_modificacion\":\"2025:05:23:22:31:23\",\"servido_hoy\":\"no\"}}";
   return payload;
 
 }
 
 
+/*
+Esta funcion se utiliza para leer la informacion de las porciones desde la memoria del dispositivo
+La funcion no recibe ningun parametro
+La funcion devuelve un Json en forma de String que contiene toda la informacion de las porciones
+*/
+String leer_porc_mem(){
+  String payload_2;
+            Serial.println("Se inicia la funcion para leer la memoria");
+  File file = LittleFS.open("/datos.txt", "r");
+  if (file) {
+            Serial.println("Se ingresa al if");
+    while (file.available()) {
+            Serial.println("se ingresa al while");
+      //Serial.write(file.read()); 
+      //Serial.println(file.read());
+      //payload_2 = file.read();
+      char c = file.read();
+      payload_2 += c;
+            Serial.println("datos en payload_2");
+            Serial.println(payload_2);
 
+    }
+  file.close();
+  }
+  return payload_2; 
+}
+
+
+/*
+Esta función se utiliza para comparar dos Json en forma de String
+La funcion recibe dos parametros, que corresponden a los string con los Json
+La funcion devuelve 1 o 2, indicando si el String 1 es mas reciente o 2 para el caso contrario.
+*/
+int comparar_infos(String json_1, String json_2){
+  int numero_1 = 0;
+  int numero_2 = 0;
+  int reciente=1; //se incia suponiendo que el mas reciente es el documento 1
+
+  //Se extraen las fechas de la primera porcion en cada json. La fecha de modificacion deberia ser igual en todas las porciones dentro del mismo json.
+  JsonDocument doc_1;
+  deserializeJson(doc_1, json_1);
+  String fecha1 = doc_1["porcion1"]["fecha_de_modificacion"];
+  JsonDocument doc_2;
+  deserializeJson(doc_2, json_2);
+  String fecha2 = doc_2["porcion1"]["fecha_de_modificacion"];
+
+  //Se recorre digito por digito las fechas hasta encontrar alguna diferencia en los digitos. En este caso se escoge el mayor y de 
+  //esta forma se puede decidir cual dato es mas reciente con base en la fecha de modificacion
+  for (int i=0; i < fecha2.length(); i++){
+    char num_1 = fecha1.charAt(i);
+    char num_2 = fecha2.charAt(i);
+    if (isDigit(num_1) && isDigit(num_2)){
+      numero_1 = num_1 - '0';
+      numero_2 = num_2 - '0';
+        if (numero_1 < numero_2){
+          reciente = 2;
+          return reciente;
+        }else if (numero_1 > numero_2){
+          return reciente;
+        }
+    }
+  }
+  return reciente;
+}
+
+void write_data (String data_str){
+  if (!LittleFS.begin()) {
+  Serial.println("Error al montar LittleFS");
+  return;
+  }
+
+  File file = LittleFS.open("/datos.txt", "w");
+  if (file) {
+    file.println(data_str); // Guardar valor
+    file.close();
+    Serial.println("Variable guardada correctamente.");
+  }
+}
 
 
 /*
@@ -240,6 +384,32 @@ void loop()
 {
   Blynk.run();
 }
+  JsonDocument doc_info_porciones;
+  deserializeJson(doc_info_porciones, info_porciones);
+  int counter =1;
+    Serial.println("test para extraer subjson de un json");
+    while (counter<1000) {
+      Serial.println("Se ingresa al while");
+      String S_counter = String(counter);
+      String key_porc = "porcion"+S_counter;
+      Serial.println("String de info recibida");
+      Serial.println(info_porciones);
 
+      Serial.println("llave a la que se está accediendo_1");
+      Serial.println(key_porc);
+      Serial.println("resultado de comparacion");
+      Serial.println(info_porciones.indexOf(key_porc));
 
-*/
+      if (info_porciones.indexOf(key_porc)!=-1){
+        porc = doc_info_porciones[key_porc].as<String>();
+      }else{
+        break;
+      }
+      Serial.println("llave a la que se está accediendo_2");
+      Serial.println(key_porc);
+      Serial.println("Info de esta porción");
+      Serial.println(porc);
+      counter++;
+    }
+    */
+
